@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.env.local
+
+# Node
+node_modules/
+dist/
+build/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment (contains secrets)
+.env
+.env.local
+.env.*.local
+
+# Docker
+*.pid
+*.seed
+
+# Sensitive
+*.pem
+*.key
+credentials.json

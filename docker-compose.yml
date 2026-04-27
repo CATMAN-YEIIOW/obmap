@@ -1,0 +1,92 @@
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: obmap-postgres
+    environment:
+      POSTGRES_USER: obmap
+      POSTGRES_PASSWORD: obmap123456
+      POSTGRES_DB: obmap
+    ports:
+      - "5432:5432"
+    volumes:
+      - c:/docker/obmap/postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U obmap -d obmap"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: obmap-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - c:/docker/obmap/redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  emqx:
+    image: emqx/emqx:5.8
+    container_name: obmap-emqx
+    environment:
+      EMQX_NAME: emqx
+      EMQX_HOST: 127.0.0.1
+      EMQX_Dashboard__default_username: admin
+      EMQX_Dashboard__default_password: obmap123456
+      EMQX_AUTH__USER__1__USERNAME: admin
+      EMQX_AUTH__USER__1__PASSWORD: asdfghjkl66
+    ports:
+      - "1883:1883"    # MQTT TCP
+      - "8083:8083"    # MQTT WebSocket
+      - "8084:8084"    # MQTT WebSocket TLS
+      - "18083:18083"  # Dashboard
+    volumes:
+      - c:/docker/obmap/emqx_data:/opt/emqx/data
+      - c:/docker/obmap/emqx_logs:/opt/emqx/log
+    healthcheck:
+      test: ["CMD", "bash", "-c", "curl -s http://localhost:18083/api/v5/healthz || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: obmap-backend
+    command: uvicorn app.main:socket_app --host 0.0.0.0 --port 8000
+    environment:
+      DATABASE_URL: postgresql://obmap:obmap123456@postgres:5432/obmap
+      REDIS_URL: redis://redis:6379
+      SIMULATOR_ENABLED: "true"
+      MQTT_BROKER_HOST: emqx
+      MQTT_BROKER_PORT: "1883"
+      MQTT_USERNAME: admin
+      MQTT_PASSWORD: asdfghjkl66
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      emqx:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: obmap-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend

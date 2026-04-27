@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /f/code/tt/obmap -type f -name *.py -o -name *.ts -o -name *.tsx -o -name *.json -o -name *.yml -o -name *.sql -o -name *.md)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(docker-compose exec:*)"
+    ]
+  }
+}
